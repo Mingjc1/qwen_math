@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qwen-math"
+version = "0.1.0"
+description = "Learning-oriented SFT, DPO, PPO and GRPO for Qwen math models"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+# Unlocked starting dependencies; validate and freeze before server experiments.
+train = ["torch", "transformers", "peft", "datasets", "accelerate", "tensorboard"]
+reference = ["trl"]
+math = ["math-verify"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
