@@ -64,3 +64,40 @@ def build_sft_dataloader(
     #    collate_fn=第一步得到的函数
     #    num_workers=0
     return DataLoader(dataset=samples,batch_size=batch_size,shuffle=shuffle,collate_fn=collate_fn,num_workers=0,generator=generator,)
+
+def collate_rollouts(samples, pad_token_id):
+    """
+    samples：build_rollout_sample 返回的字典列表。
+    返回四个 [B, T] 张量。
+    """
+    # 1. 将每条样本中的三个字段转成列表：
+    #    input_ids、attention_mask、response_mask
+    #    使用 tensor.tolist()
+    # 2. 调用 collate_sft，得到 batch
+    # 3. 创建 terminated：
+    #    torch.zeros_like(batch["response_mask"], dtype=torch.bool)
+    # 4. 遍历原 samples，将每条 terminated 复制到对应行前部：
+    #    terminated[i, :length] = sample["terminated"].to(
+    #        terminated.device
+    #    )
+    # 5. batch["terminated"] = terminated
+    # 6. 返回 batch
+    sft_samples = [{
+        "input_ids": s["input_ids"].tolist(),
+        "attention_mask": s["attention_mask"].tolist(),
+        "response_mask": s["response_mask"].tolist(),
+    } for s in samples]
+
+    batch = collate_sft(sft_samples, pad_token_id)
+    terminated = torch.zeros_like(
+        batch["response_mask"], dtype=torch.bool
+    )
+
+    for i, sample in enumerate(samples):
+        length = sample["terminated"].numel()
+        terminated[i, :length] = sample["terminated"].to(
+            terminated.device
+        )
+
+    batch["terminated"] = terminated
+    return batch

@@ -4,7 +4,9 @@
 后训练恢复同一 SFT adapter，参考策略为独立冻结的 SFT 快照。"""
 
 from transformers import AutoTokenizer
-
+import torch
+from transformers import AutoModelForCausalLM
+from qwen_math.models.value_head import ValueHead
 
 def load_tokenizer(
     model_id="Qwen/Qwen2.5-Math-1.5B",
@@ -22,8 +24,6 @@ def load_tokenizer(
     tokenizer.padding_side = "right"
     return tokenizer
     
-import torch
-from transformers import AutoModelForCausalLM
 
 
 def load_base_model(
@@ -69,5 +69,35 @@ from peft import PeftModel
 def load_adapter(base_model, adapter_path, is_trainable=False):
     """在基座上恢复已保存的 LoRA 适配器。"""
     return PeftModel.from_pretrained(base_model,adapter_path,is_trainable=is_trainable)
+
+def load_reference_model(
+    adapter_path,
+    model_id="Qwen/Qwen2.5-Math-1.5B",
+    device="cuda",
+    dtype=torch.bfloat16,
+):
+    """加载独立的 SFT 参考模型，冻结所有参数。"""
+    base_model = load_base_model(model_id=model_id, device=device, dtype=dtype)
+    model = load_adapter(base_model, adapter_path, is_trainable=False)
+    model.requires_grad_(False)
+    model.eval()
+    return model
     
-    
+def load_ppo_policy(
+    adapter_path,
+    model_id="Qwen/Qwen2.5-Math-1.5B",
+    device="cuda",
+    dtype=torch.bfloat16,
+):
+    """返回可训练的 SFT 策略和独立价值头。"""
+    # 1. load_base_model，传入 model_id、device、dtype
+    # 2. load_adapter，is_trainable=True
+    # 3. model.eval()，PPO 中关闭 dropout，但保留梯度
+    # 4. 创建 ValueHead(model.config.hidden_size)
+    # 5. 将价值头放到模型设备，dtype=torch.float32
+    # 6. 返回 model, value_head
+    base_model = load_base_model(model_id=model_id, device=device, dtype=dtype)
+    model =load_adapter(base_model, adapter_path, is_trainable=True)
+    model.eval()
+    value_head = ValueHead(model.config.hidden_size).to(device=next(model.parameters()).device, dtype=torch.float32)
+    return model, value_head
