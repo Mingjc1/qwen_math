@@ -20,6 +20,7 @@
 | 6 | [accelerate.md](accelerate.md) | 后续把单机训练循环迁移到服务器 |
 | 7 | [trl.md](trl.md) | 用成熟实现核对算法定义与实验配置 |
 | 查阅 | [python_tools.md](python_tools.md) | 管理配置、路径、日志和随机种子 |
+| 项目实战 | [ppo.md](ppo.md) | 对照现有代码串起 PPO 采样、奖励、GAE、更新和断点恢复 |
 
 第一轮只学习前五篇。Accelerate 和 TRL 可以等自己实现的损失函数能工作后再读。
 

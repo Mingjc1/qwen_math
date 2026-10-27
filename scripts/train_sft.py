@@ -94,7 +94,7 @@ def main():
     val_samples = prepare_samples(
         CONFIG["val_path"], tokenizer, CONFIG["max_length"], "验证集"
     )
-    return  # 临时停止，避免继续加载模型和启动训练
+    #return  # 临时停止，避免继续加载模型和启动训练
 
     # 数据加载器使用独立生成器，每轮按 seed + epoch 重建顺序。
     train_loader = build_sft_dataloader(
