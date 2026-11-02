@@ -4,7 +4,8 @@
 只训练回答，区分真实 EOS 与 padding，截断后无回答的样本必须剔除。"""
 
 import torch
-
+from functools import partial
+from torch.utils.data import DataLoader
 
 def collate_sft(samples, pad_token_id):
     """
@@ -40,8 +41,6 @@ def collate_sft(samples, pad_token_id):
         "response_mask": response_masks,
     }
 
-from functools import partial
-from torch.utils.data import DataLoader
 
 
 def build_sft_dataloader(
@@ -101,3 +100,45 @@ def collate_rollouts(samples, pad_token_id):
 
     batch["terminated"] = terminated
     return batch
+
+def collate_preferences(samples, pad_token_id):
+    """
+    samples：编码后的偏好对列表，长度 B。
+    返回三个 [2B, T] 张量组成的字典。
+    前 B 行为 chosen，后 B 行为 rejected。
+    """
+    # 1. samples 为空时抛出 ValueError
+    # 2. 收集所有 sample["chosen"]，得到 chosen_samples
+    # 3. 收集所有 sample["rejected"]，得到 rejected_samples
+    # 4. 合并：chosen_samples + rejected_samples
+    # 5. 调用 collate_sft 并返回
+    if not samples:
+        raise ValueError
+    chosen_samples = [s["chosen"] for s in samples]
+    rejected_samples = [s["rejected"] for s in samples]
+    new_samples = chosen_samples + rejected_samples
+    return collate_sft(new_samples, pad_token_id)
+
+def build_preference_dataloader(
+    samples, pad_token_id,
+    batch_size=1, shuffle=True,
+):
+    """
+    samples：编码后的偏好对列表。
+    batch_size：每批偏好对数量。
+    """
+    # 1. 用 partial 固定 collate_preferences 的 pad_token_id
+    # 2. 创建并返回 DataLoader：
+    #    dataset=samples
+    #    batch_size=batch_size
+    #    shuffle=shuffle
+    #    collate_fn=第一步得到的函数
+    #    num_workers=0
+    collate_fn = partial(collate_preferences, pad_token_id=pad_token_id)
+    return DataLoader(
+        dataset=samples,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=collate_fn,
+        num_workers=0,
+    )

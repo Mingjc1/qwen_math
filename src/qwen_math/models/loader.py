@@ -101,3 +101,33 @@ def load_ppo_policy(
     model.eval()
     value_head = ValueHead(model.config.hidden_size).to(device=next(model.parameters()).device, dtype=torch.float32)
     return model, value_head
+
+def load_grpo_policy(
+    adapter_path,
+    model_id="Qwen/Qwen2.5-Math-1.5B",
+    device="cuda",
+    dtype=torch.bfloat16,
+):
+    """从 SFT 适配器加载可训练的 GRPO 策略，不创建价值头。"""
+    base_model = load_base_model(model_id=model_id, device=device, dtype=dtype)
+    model = load_adapter(base_model, adapter_path, is_trainable=True)
+    model.eval()
+    return model
+
+
+def load_dpo_policy(
+    adapter_path,
+    model_id="Qwen/Qwen2.5-Math-1.5B",
+    device="cuda",
+    dtype=torch.bfloat16,
+):
+    """从 SFT 适配器加载可训练的 DPO 策略。"""
+    # 1. 调用 load_base_model，传入 model_id、device、dtype
+    # 2. 调用 load_adapter：
+    #    基座模型、adapter_path、is_trainable=True
+    # 3. model.eval()，关闭 dropout
+    # 4. 返回 model
+    base_model = load_base_model(model_id=model_id, device=device, dtype=dtype)
+    model = load_adapter(base_model, adapter_path, is_trainable=True)
+    model.eval()
+    return model

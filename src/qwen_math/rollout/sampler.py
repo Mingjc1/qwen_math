@@ -139,3 +139,35 @@ def sample_rollout_batch(
         for key, tensor in batch.items()
     }
     return batch, response_texts
+
+def sample_group_rollouts(
+    model, tokenizer, questions,
+    group_size=4, max_new_tokens=256,
+):
+    """
+    questions：B 道题。
+    返回：
+        batch：B*G 条序列组成的批次
+        response_texts：B*G 条回答
+    顺序：题目0重复G次，题目1重复G次……
+    """
+    # 1. 检查 questions 非空
+    # 2. 检查 group_size 为整数且 >= 2
+    # 3. 构建 expanded_questions：
+    #    每道题连续重复 group_size 次
+    # 4. 调用 sample_rollout_batch，传入展开后的问题、
+    #    max_new_tokens，并返回结果
+    if not questions:
+        raise ValueError("questions 不能为空")
+    if type(group_size) is not int or group_size < 2:
+        raise ValueError("group_size 必须为整数且大于等于 2")
+    expaned_questions = []
+    for q in questions:
+        for _ in range(group_size):
+            expaned_questions.append(q)
+    return sample_rollout_batch(
+        model=model,
+        tokenizer=tokenizer,
+        questions=expaned_questions,
+        max_new_tokens=max_new_tokens,
+    )
